@@ -1,0 +1,20 @@
+# Simple Kalman Filter Compared to different Averages
+# Mobius
+# 2.22.2016
+
+input n = 8;
+
+plot Data = WMA(((close * 3) + (close[1] * 2) + close[2] + Average(close, n)) / 7, n);
+
+def long3 = Data > Data[1];
+def short3 = Data < Data[1];
+
+
+Data.AssignValueColor(if long3 then Color.yellow else if short3 then Color.red else Color.CURRENT);
+Data.SetLineWeight(3);
+
+
+
+# Data.SetDefaultColor(Color.Cyan);
+# Data.SetHiding(!Kalman);
+# AddLabel(1, "Kalman Filter", Color.Cyan);
