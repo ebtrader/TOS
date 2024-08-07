@@ -1,0 +1,10 @@
+#
+# Charles Schwab & Co. (c) 2008-2024
+#
+
+input price = close;
+input length = 9;
+input displace = 0;
+
+plot AvgWtd = wma(price, length)[-displace];
+AvgWtd.SetDefaultColor(GetColor(1));
