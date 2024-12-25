@@ -1,0 +1,164 @@
+# congestion_box_00c
+
+# add horz lines at highest hi above box, and lowest low below box
+
+# https://usethinkscript.com/threads/congestion-zone.10503/#post-92890
+
+def na = double.nan;
+def bn = barnumber();
+#-------------------------------------
+# choose wick or body price levels
+input candle_levels = { "wick" , default "body" };
+def highx;
+def lowx;
+switch (candle_levels) {
+case "wick":
+  highx = high;
+  lowx = low;
+case "body":
+  highx = max(open, close);
+  lowx = min(open, close);
+}
+
+def ht = highx - lowx;
+#-----------------------------------
+input min_inside_bars = 3;
+
+input show_label__candle_levels = no;
+addlabel(show_label__candle_levels, "Candle levels - " + candle_levels, color.yellow);
+
+input show_label__min_inside_bars = no;
+addlabel(show_label__min_inside_bars, "Min inside bars - " + min_inside_bars, color.yellow);
+# --------------------------------
+# test if a giant candle appears,  then ignore it
+input ignore_big_candles = no;
+input candle_ht_avg_multiplier_max = 5.0;
+input candle_height_avg_len = 20;
+
+def ht_avg = round(Average( ht[1], candle_height_avg_len),2);
+def ht_avg_factor = round(ht / ht_avg, 1);
+
+def ht_en = !ignore_big_candles or (ht < (ht_avg * candle_ht_avg_multiplier_max));
+#----------------------------------
+# inside bar , count smaller bars after the current bar
+def max_bars = 70;
+def future_bar_count = fold k = 1 to max_bars
+  with q = 1
+## congestion , 1 bar parameter within high/low
+  while (ht_en and (between(getvalue(highx, -k), lowx, highx) or between(getvalue(lowx, -k), lowx, highx)))
+## insidebars , top and bottom of bar is within high/low
+# while (ht_en and highx[0] >= getvalue(highx, -k) and lowx[0] <= getvalue(lowx, -k))
+  do q + 1;
+
+
+# -------------------------------
+def rev_cnt =
+ if bn == 1 then 0
+ else if rev_cnt[1] > 1 then (rev_cnt[1] - 1)
+ else if future_bar_count >= min_inside_bars then future_bar_count
+ else 0;
+
+def inside_start = (rev_cnt[1] <= 1 and future_bar_count >= min_inside_bars);
+def start_cnt = if bn == 1 then 0 else if inside_start then (start_cnt[1] + 1) else start_cnt[1];
+
+#def vert = 0.0006;
+def vert = 0.00;
+input show_cloud = yes;
+input show_bubble_pattern_bar_count = no;
+addchartbubble(show_bubble_pattern_bar_count and inside_start, (high * (1 + vert)), future_bar_count, color.gray, yes);
+
+# ----------------------------------
+# plot lines
+
+def inside_hi =
+ if rev_cnt == 0 then na
+ else if inside_start then highx
+ else inside_hi[1];
+
+def inside_lo =
+ if rev_cnt == 0 then na
+ else if inside_start then lowx
+ else inside_lo[1];
+
+plot zhi = inside_hi;
+plot zlo = inside_lo;
+
+zhi.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+#zhi.SetStyle(Curve.MEDIUM_DASH);
+#zhi.SetDefaultColor(Color.cyan);
+zhi.SetDefaultColor(Color.gray);
+zhi.setlineweight(1);
+zhi.hidebubble();
+
+zlo.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+#zlo.SetStyle(Curve.MEDIUM_DASH);
+#zlo.SetDefaultColor(Color.cyan);
+zlo.SetDefaultColor(Color.gray);
+zlo.setlineweight(1);
+zlo.hidebubble();
+
+# ---------------------------------------
+# use 2 clouds, to avoid 2 adjacent patterns being connected
+def iscnt_odd = ( start_cnt % 2 == 1 );
+
+def zhiodd = if (show_cloud and iscnt_odd) then zhi else na;
+addcloud(zhiodd, zlo, color.gray);
+def zhieven = if (show_cloud and !iscnt_odd) then zhi else na;
+addcloud(zhieven, zlo, color.gray);
+
+# ---------------------------------------
+
+input show_arrow_on_bar1 = no;
+plot z1 = if show_arrow_on_bar1 and inside_start then (low * (1 - vert)) else na;
+z1.SetPaintingStrategy(PaintingStrategy.ARROW_UP);
+z1.SetDefaultColor(Color.cyan);
+z1.setlineweight(2);
+z1.hidebubble();
+#
+# ---------------------------------
+
+
+# add horz lines at,
+#  highest hi above box,
+#  and lowest low below box
+# iscnt_odd
+
+input show_range_highest_lowest_lines = no;
+def srl = show_range_highest_lowest_lines;
+
+def toplimit;
+if srl and inside_start then {
+toplimit = fold t1 = 0 to max_bars
+  with top1
+  while t1 < future_bar_count
+  do max(top1, getvalue(high, -t1));
+} else if srl and rev_cnt > 0 then {
+toplimit = toplimit[1];
+} else {
+toplimit = na;
+}
+
+plot zt = toplimit;
+zt.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+zt.SetDefaultColor(Color.yellow);
+#zt.setlineweight(1);
+zt.hidebubble();
+
+
+def botlimit;
+if srl and inside_start then {
+botlimit = fold b1 = 0 to max_bars
+  with bot1 = 999999
+  while b1 < future_bar_count
+  do min(bot1, getvalue(low, -b1));
+} else if srl and rev_cnt > 0 then {
+botlimit = botlimit[1];
+} else {
+botlimit = na;
+}
+
+plot zb = botlimit;
+zb.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+zb.SetDefaultColor(Color.yellow);
+#zb.setlineweight(1);
+zb.hidebubble();

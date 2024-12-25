@@ -1,0 +1,37 @@
+#Gaussian with Labels
+
+
+def period3 = if close < close[1] then 16 else 15.5;
+
+input gauss3 = yes;
+
+
+#Gaussian 3
+
+#these are the inputs
+def gaussprice3 = vwap;
+
+def symbol3 = (6.28318531) / period3;
+def beta3 = (1 – Cos(symbol3)) / (0.18911732);
+
+def alpha3 = -beta3 + Sqr(Power(beta3, 2) + (2 * beta3));
+
+#this the engine - the guts
+
+rec GF3 = (Power(alpha3, 4)) * gaussprice3 + (4 * (1 - alpha3)) * GF3[1] - 6 * Power(1 - alpha3, 2) * GF3[2] + 4 * Power(1 - alpha3, 3) * GF3[3] - Power(1 - alpha3, 4) * GF3[4];
+
+#this is drawing the line
+
+def long1 = GF3 > GF3[1];
+def short1 = GF3 < GF3[1];
+
+def long2 = GF3 > GF3[1];
+def short2 = GF3 < GF3[1];
+
+def long3 = GF3 > GF3[1];
+def short3 = GF3 < GF3[1];
+
+plot Gaussian3 = if gauss3 then GF3 else Double.NaN;
+Gaussian3.AssignValueColor(if long3 then Color.MAGENTA else if short3 then Color.GRAY else Color.CURRENT);
+Gaussian3.SetLineWeight(3);
+
